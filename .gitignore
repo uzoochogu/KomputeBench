@@ -1,0 +1,8 @@
+# Artifacts
+external/
+build/
+out/
+shader/*.hpp
+
+# Scrap
+scrap*
