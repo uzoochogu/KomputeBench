@@ -7,7 +7,7 @@
 class OpMyCustom : public kp::OpAlgoDispatch
 {
   public:
-    OpMyCustom(std::vector<std::shared_ptr<kp::Tensor>> tensors,
+    OpMyCustom(std::vector<std::shared_ptr<kp::Memory>> tensors,
          std::shared_ptr<kp::Algorithm> algorithm)
       : kp::OpAlgoDispatch(algorithm)
     {
@@ -35,9 +35,9 @@ int main() {
 
     // Record and run sequence
     mgr.sequence()
-        ->record<kp::OpTensorSyncDevice>({tensorOut})
+        ->record<kp::OpSyncDevice>({tensorOut})
         ->record<OpMyCustom>({tensorOut}, mgr.algorithm())
-        ->record<kp::OpTensorSyncLocal>({tensorOut})
+        ->record<kp::OpSyncLocal>({tensorOut})
         ->eval();
 
 

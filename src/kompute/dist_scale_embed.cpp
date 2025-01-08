@@ -20,7 +20,7 @@ int main() {
     auto tensorOut = mgr.tensor(output); // std::shared_ptr<kp::TensorT<float>>
 
     // Parameters for the algorithm
-    std::vector<std::shared_ptr<kp::Tensor>> params = {tensorOut};
+    std::vector<std::shared_ptr<kp::Memory>> params = {tensorOut};
 
     const std::vector<uint32_t> shader = std::vector<uint32_t>(
       shader::DIST_SCALE_COMP_SPV.begin(), shader::DIST_SCALE_COMP_SPV.end());
@@ -30,9 +30,9 @@ int main() {
 
     // Record and run sequence
     mgr.sequence()
-        ->record<kp::OpTensorSyncDevice>({tensorOut})
+        ->record<kp::OpSyncDevice>({tensorOut})
         ->record<kp::OpAlgoDispatch>(algo) // , N, 1, 1)  // Dispatch N threads
-        ->record<kp::OpTensorSyncLocal>({tensorOut})
+        ->record<kp::OpSyncLocal>({tensorOut})
         ->eval();
 
     // Print results
