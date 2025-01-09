@@ -42,9 +42,9 @@ int main() {
 
 
     // Print results
-    for (int i = 0; i < N; i++) {
-        float result = tensorOut->data()[i];
+    for (uint32_t i{0}; const auto& result : tensorOut->vector()) {
         std::cout << std::format("i = {:>2}: dist from {} to Scale is {:<8}\n",
         i, ref, result);
+        i++;
     }
 }
