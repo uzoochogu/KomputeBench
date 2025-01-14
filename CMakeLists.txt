@@ -23,10 +23,28 @@ include(FetchContent)
 FetchContent_Declare(
     kompute
     GIT_REPOSITORY https://github.com/KomputeProject/kompute.git
+    GIT_TAG master
 )
-FetchContent_MakeAvailable(kompute)
 
-# shader compilation
+FetchContent_Declare(
+    googlebenchmark
+    GIT_REPOSITORY https://github.com/google/benchmark.git
+    GIT_TAG main
+)
+
+FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG v1.15.2
+)
+
+FetchContent_MakeAvailable(
+    kompute
+    googletest
+    googlebenchmark
+)
+
+# shaders compilation
 vulkan_compile_shader(
     INFILE shader/dist_scale.comp
     OUTFILE shader/dist_scale.hpp
@@ -34,6 +52,22 @@ vulkan_compile_shader(
 
 add_library(shader INTERFACE "shader/dist_scale.hpp")
 target_include_directories(shader INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+
+vulkan_compile_shader(
+    INFILE shader/sgemm_naive.comp
+    OUTFILE shader/sgemm_naive.hpp
+    NAMESPACE "sgemm_shader")
+
+add_library(sgemm_naive INTERFACE "shader/sgemm_naive.hpp")
+target_include_directories(sgemm_naive INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+
+vulkan_compile_shader(
+    INFILE shader/sgemm_tiled.comp
+    OUTFILE shader/sgemm_tiled.hpp
+    NAMESPACE "sgemm_shader")
+
+add_library(sgemm_tiled INTERFACE "shader/sgemm_tiled.hpp")
+target_include_directories(sgemm_tiled INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 
 # Executables
 # kompute
@@ -53,9 +87,38 @@ target_link_libraries(kompute_dist_scale_op
     kompute::kompute
 )
 
+add_executable(sgemm_naive_kompute
+    src/kompute/sgemm_naive.cpp)
+target_link_libraries(sgemm_naive_kompute
+    PRIVATE
+    sgemm_naive
+    kompute::kompute
+)
+
+add_executable(sgemm_tiled_kompute
+    src/kompute/sgemm_tiled.cpp)
+target_link_libraries(sgemm_tiled_kompute
+    PRIVATE
+    sgemm_tiled
+    kompute::kompute
+)
+
 # cuda
 add_executable(cuda_dist_scale src/cuda/distance_scale.cu)
 target_link_libraries(cuda_dist_scale PRIVATE CUDA::cudart)
 
 add_executable(cuda_sgemm_hgemm src/cuda/hgemm_sgemm.cu)
 target_link_libraries(cuda_sgemm_hgemm PRIVATE CUDA::cudart CUDA::cublas )
+
+# Benchmark
+add_executable(sgemm_benchmark src/benchmark/sgemm_benchmark.cpp)
+target_link_libraries(
+    sgemm_benchmark 
+    PRIVATE
+    sgemm_naive
+    sgemm_tiled
+    benchmark::benchmark
+    CUDA::cudart 
+    CUDA::cublas
+    kompute::kompute
+)

@@ -1,0 +1,59 @@
+#version 450
+#define TS 16u
+layout(local_size_x = TS, local_size_y = TS, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) readonly buffer buf_a { float a[]; };
+layout(set = 0, binding = 1) readonly buffer buf_b { float b[]; };
+layout(set = 0, binding = 2) writeonly buffer buf_c { float c[]; };
+
+layout(push_constant) uniform PushConstants {
+  float M;
+  float N;
+  float K;
+}
+params;
+
+// Shared memory tiles
+shared float As[TS][TS];
+shared float Bs[TS][TS];
+
+void main() {
+  uint row = gl_GlobalInvocationID.x;
+  uint col = gl_GlobalInvocationID.y;
+  uint localRow = gl_LocalInvocationID.x;
+  uint localCol = gl_LocalInvocationID.y;
+
+  float sum = 0.0;
+
+  // Loop over tiles
+  for (uint t = 0; t < (uint(params.K) + TS - 1) / TS; t++) {
+    // Collaborative loading of tiles into shared memory
+    if ((row < uint(params.M)) && (t * TS + localCol < uint(params.K))) {
+      As[localRow][localCol] = a[row * uint(params.K) + t * TS + localCol];
+    } else {
+      As[localRow][localCol] = 0.0;
+    }
+
+    if ((t * TS + localRow < uint(params.K)) && (col < uint(params.N))) {
+      Bs[localRow][localCol] = b[(t * TS + localRow) * uint(params.N) + col];
+    } else {
+      Bs[localRow][localCol] = 0.0;
+    }
+
+    barrier();
+    memoryBarrierShared();
+
+    // Compute partial dot product for this tile
+    for (uint k = 0; k < TS; k++) {
+      sum += As[localRow][k] * Bs[k][localCol];
+    }
+
+    barrier();
+    memoryBarrierShared();
+  }
+
+  // Write result
+  if (row < uint(params.M) && col < uint(params.N)) {
+    c[row * uint(params.N) + col] = sum;
+  }
+}
