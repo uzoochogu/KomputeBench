@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # CUDA flags
-set(CMAKE_CUDA_STANDARD 17)
+set(CMAKE_CUDA_STANDARD 20)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_ARCHITECTURES native)
 message(STATUS "CUDA Arch: ${CMAKE_CUDA_ARCHITECTURES}")
@@ -56,3 +56,6 @@ target_link_libraries(kompute_dist_scale_op
 # cuda
 add_executable(cuda_dist_scale src/cuda/distance_scale.cu)
 target_link_libraries(cuda_dist_scale PRIVATE CUDA::cudart)
+
+add_executable(cuda_sgemm_hgemm src/cuda/hgemm_sgemm.cu)
+target_link_libraries(cuda_sgemm_hgemm PRIVATE CUDA::cudart CUDA::cublas )
