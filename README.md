@@ -35,13 +35,19 @@ The benchmark executables have "benchmark" in their name.
 ## Results
 
 ### cuBLAS vs Kompute naive vs Kompute GEMM Tiling in Local Memory
-![cuBLAS vs Kompute naive vs Kompute GEMM Tiling in Local Memory](./images/sgemm_benchmark.png)
+<!-- ![cuBLAS vs Kompute naive vs Kompute GEMM Tiling in Local Memory](./images/sgemm_benchmark.png =937x516) -->
+<img src="./images/sgemm_benchmark.png" width="642" height="354" alt="cuBLAS vs Kompute naive vs Kompute GEMM Tiling in Local Memory">
 
 <br> <br>
 *Two 4096x4096 32bit `float` matrix multiplication on an RTX 4080 12GB mobile GPU.* 
 
 ### Discussion
-GEMM implementation using Tiling in Local Memory can achieve about between `0.5-0.58x` of cuBLAS performance. This is promising as there are still various optimizations that can be done to improve performance.
+
+* Fastest Naive implementation is about 0.12x of cuBLAS performance.
+* Fastest Tiling Implementation is about 0.1x of cuBLAS performance.
+* 2D register blocking achieves about 0.35x of cuBLAS performance.
+
+There are still various optimizations that can be done to improve performance.
 
 ### GEMM methods to be implemented:
 - [x] Tiling in local memory.
@@ -49,7 +55,7 @@ GEMM implementation using Tiling in Local Memory can achieve about between `0.5-
 - [ ] Transposed input matrix.
 - [ ] More work per thread.
 - [ ] Wider loads with register blocking.
-- [ ] 2D register blocking.
+- [X] 2D register blocking.
 
 ## Todo
 - [ ] Compare cuBLAS sgemm against Kompute using various GEMMs methods.
@@ -58,3 +64,5 @@ GEMM implementation using Tiling in Local Memory can achieve about between `0.5-
 
 ## References
 * [`Matrix multiplication in WebGL2-compute`](https://www.ibiblio.org/e-notes/webgl/gpu/mul/sgemm.htm)
+
+* [`How to Optimize a GEMM`](https://github.com/tpoisonooo/how-to-optimize-gemm/) -  Optimized Row major matrix multiplication using Vulkan 
