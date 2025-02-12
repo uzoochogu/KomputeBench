@@ -1,6 +1,7 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 
+#include <cassert>
 #include <format>
 #include <iostream>
 #include <random>
@@ -94,6 +95,18 @@ void cpu_matmul_ikj(const std::span<const float> A,
       }
     }
   }
+}
+
+std::vector<float> transposeMatrix(const std::span<const float> matrix,
+                                   int rows, int cols) {
+  assert(matrix.size() == rows * cols);
+  std::vector<float> result(rows * cols);
+  for (int i = 0; i < rows; i++) {
+    for (int j = 0; j < cols; j++) {
+      result[j * rows + i] = matrix[i * cols + j];
+    }
+  }
+  return result;
 }
 
 #endif  // UTILS_HPP
