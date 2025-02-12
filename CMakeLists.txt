@@ -45,29 +45,45 @@ FetchContent_MakeAvailable(
 )
 
 # shaders compilation
-vulkan_compile_shader(
-    INFILE shader/dist_scale.comp
-    OUTFILE shader/dist_scale.hpp
-    NAMESPACE "shader")
 
-add_library(shader INTERFACE "shader/dist_scale.hpp")
-target_include_directories(shader INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+# Function to compile shader and create interface library
+function(add_shader_library SHADER_NAME SHADER_SOURCE NAMESPACE)
+    vulkan_compile_shader(
+        INFILE ${SHADER_SOURCE}
+        OUTFILE shader/${SHADER_NAME}.hpp
+        NAMESPACE ${NAMESPACE}
+    )
 
-vulkan_compile_shader(
-    INFILE shader/sgemm_naive.comp
-    OUTFILE shader/sgemm_naive.hpp
-    NAMESPACE "sgemm_shader")
+    add_library(${SHADER_NAME} INTERFACE "shader/${SHADER_NAME}.hpp")
+    target_include_directories(${SHADER_NAME} INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+endfunction()
 
-add_library(sgemm_naive INTERFACE "shader/sgemm_naive.hpp")
-target_include_directories(sgemm_naive INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+# Lists of shaders
+set(BASIC_SHADERS
+    dist_scale
+    transpose
+)
 
-vulkan_compile_shader(
-    INFILE shader/sgemm_tiled.comp
-    OUTFILE shader/sgemm_tiled.hpp
-    NAMESPACE "sgemm_shader")
+set(SGEMM_SHADERS
+    sgemm_naive_v1
+    sgemm_naive_v2
+    sgemm_naive_col
+    sgemm_tiled_v1
+    sgemm_tiled_v2
+    sgemm_tiled_v3
+    sgemm_tiled_v4
+    sgemm_tiled_col
+    sgemm_regblock_col
+)
 
-add_library(sgemm_tiled INTERFACE "shader/sgemm_tiled.hpp")
-target_include_directories(sgemm_tiled INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+foreach(shader IN LISTS BASIC_SHADERS)
+    add_shader_library(${shader} "shader/${shader}.comp" "shader")
+endforeach()
+
+# Add SGEMM shaders
+foreach(shader IN LISTS SGEMM_SHADERS)
+    add_shader_library(${shader} "shader/${shader}.comp" "sgemm_shader")
+endforeach()
 
 # Executables
 # kompute
@@ -75,7 +91,7 @@ add_executable(kompute_dist_scale_embed
     src/kompute/dist_scale_embed.cpp)
 target_link_libraries(kompute_dist_scale_embed
     PRIVATE
-    shader
+    dist_scale
     kompute::kompute
 )
 
@@ -83,23 +99,23 @@ add_executable(kompute_dist_scale_op
     src/kompute/dist_scale_op.cpp)
 target_link_libraries(kompute_dist_scale_op
     PRIVATE
-    shader
+    dist_scale
     kompute::kompute
 )
 
-add_executable(sgemm_naive_kompute
-    src/kompute/sgemm_naive.cpp)
-target_link_libraries(sgemm_naive_kompute
+add_executable(sgemm_algo_verify
+    src/kompute/sgemm_algo_verification.cpp)
+target_link_libraries(sgemm_algo_verify
     PRIVATE
-    sgemm_naive
-    kompute::kompute
-)
-
-add_executable(sgemm_tiled_kompute
-    src/kompute/sgemm_tiled.cpp)
-target_link_libraries(sgemm_tiled_kompute
-    PRIVATE
-    sgemm_tiled
+    sgemm_naive_v1
+    sgemm_naive_v2
+    sgemm_naive_col
+    sgemm_tiled_v1
+    sgemm_tiled_v2
+    sgemm_tiled_v3
+    sgemm_tiled_v4
+    sgemm_tiled_col
+    sgemm_regblock_col
     kompute::kompute
 )
 
@@ -115,8 +131,15 @@ add_executable(sgemm_benchmark src/benchmark/sgemm_benchmark.cpp)
 target_link_libraries(
     sgemm_benchmark 
     PRIVATE
-    sgemm_naive
-    sgemm_tiled
+    sgemm_naive_v1
+    sgemm_naive_v2
+    sgemm_naive_col
+    sgemm_tiled_v1
+    sgemm_tiled_v2
+    sgemm_tiled_v3
+    sgemm_tiled_v4
+    sgemm_tiled_col
+    sgemm_regblock_col
     benchmark::benchmark
     CUDA::cudart 
     CUDA::cublas
