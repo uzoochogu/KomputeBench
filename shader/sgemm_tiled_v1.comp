@@ -1,5 +1,5 @@
 #version 450
-#define TS 16u
+#define TS 32u
 layout(local_size_x = TS, local_size_y = TS, local_size_z = 1) in;
 
 layout(set = 0, binding = 0) readonly buffer buf_a { float a[]; };
@@ -40,8 +40,8 @@ void main() {
       Bs[localRow][localCol] = 0.0;
     }
 
-    barrier();
     memoryBarrierShared();
+    barrier();
 
     // Compute partial dot product for this tile
     for (uint k = 0; k < TS; k++) {
@@ -49,7 +49,6 @@ void main() {
     }
 
     barrier();
-    memoryBarrierShared();
   }
 
   // Write result

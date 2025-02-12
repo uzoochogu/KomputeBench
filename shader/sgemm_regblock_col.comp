@@ -1,0 +1,122 @@
+// Derived from https://www.ibiblio.org/e-notes/webgl/gpu/mul/sgemm.htm
+// 2D register blocking
+// Mat A is column order, Mat B is row order
+
+#version 450
+
+#define TSM 128  // The tile-size in dimension M
+#define TSN 128  // The tile-size in dimension N
+#define TSK 16   // The tile-size in dimension K
+#define WPTM 8   // The amount of work-per-thread in dimension M
+#define WPTN 8   // The amount of work-per-thread in dimension N
+#define LPTA \
+  ((TSK * WPTM * WPTN) / (TSN))  // The amount of loads-per-thread for A
+#define LPTB \
+  ((TSK * WPTM * WPTN) / (TSM))  // The amount of loads-per-thread for B
+#define RTSM \
+  16  // The reduced tile-size in dimension M (TSM/WPTM number of threads)
+#define RTSN \
+  16  // The reduced tile-size in dimension N (TSN/WPTN number of threads)
+#define MOD2(x, y) ((x) % (y))
+#define DIV2(x, y) ((x) / (y))
+
+layout(std430, set = 0, binding = 0) readonly buffer SsbA { float A[]; };
+
+layout(std430, set = 0, binding = 1) readonly buffer SsbB { float B[]; };
+
+layout(std430, set = 0, binding = 2) writeonly buffer SsbC { float C[]; };
+
+// Push constants for the matrix dimensions
+layout(push_constant) uniform PushConstants {
+  float M;
+  float N;
+  float K;
+}
+params;
+
+// Local workgroup size matches the reduced tile sizes.
+layout(local_size_x = RTSM, local_size_y = RTSN, local_size_z = 1) in;
+
+// Shared (local) memory to hold one tile of A and B.
+shared float Asub[TSK][TSM];
+shared float Bsub[TSN][TSK + 2];
+
+void main() {
+  // Get matrix dimensions from push constants.
+  int M = int(params.M), N = int(params.N), K = int(params.K);
+
+  // Thread identifiers within the local workgroup.
+  int tidm = int(gl_LocalInvocationID.x);  // Local row index (0 to RTSM-1)
+  int tidn = int(gl_LocalInvocationID.y);  // Local col index (0 to RTSN-1)
+
+  // Compute offsets: Which tile (workgroup) are we processing?
+  int offsetM = TSM * int(gl_WorkGroupID.x);
+  int offsetN = TSN * int(gl_WorkGroupID.y);
+
+  // Allocate registers for the kernel computations.
+  float Areg;
+  float Breg[WPTN];
+  float acc[WPTM][WPTN];
+
+  // Initialize the accumulation registers.
+  for (int wm = 0; wm < WPTM; wm++) {
+    for (int wn = 0; wn < WPTN; wn++) {
+      acc[wm][wn] = 0.0;
+    }
+  }
+
+  // Number of tiles to process along the K dimension.
+  int numTiles = K / TSK;
+  int t = 0;
+  do {
+    // Load one tile of A and B into shared memory.
+    for (int la = 0; la < LPTA; la++) {
+      int tid = tidn * RTSM + tidm;
+      int id = la * RTSN * RTSM + tid;
+      int row = MOD2(id, TSM);
+      int col = DIV2(id, TSM);
+      int tiledIndex = TSK * t + col;
+      Asub[col][row] = A[tiledIndex * M + offsetM + row];
+      Bsub[row][col] = B[tiledIndex * N + offsetN + row];
+    }
+
+    // Synchronize to ensure that the tile is loaded.
+    memoryBarrierShared();
+    barrier();
+
+    // Loop over the K dimension inside this tile.
+    for (int k = 0; k < TSK; k++) {
+      // Cache values of Bsub into registers.
+      for (int wn = 0; wn < WPTN; wn++) {
+        int col = tidn + wn * RTSN;
+        Breg[wn] = Bsub[col][k];
+      }
+
+      // Use the cached B values and A values from shared memory.
+      for (int wm = 0; wm < WPTM; wm++) {
+        int row = tidm + wm * RTSM;
+        Areg = Asub[k][row];
+        for (int wn = 0; wn < WPTN; wn++) {
+          acc[wm][wn] += Areg * Breg[wn];
+        }
+      }
+    }
+
+    // Synchronize before moving to the next tile.
+    memoryBarrierShared();
+    barrier();
+
+    t++;
+  } while (t < numTiles);
+
+  // Store the computed result back to global memory.
+  // Note: C is indexed as C[globalCol * M + globalRow] which implies a
+  // column-major layout.
+  for (int wm = 0; wm < WPTM; wm++) {
+    int globalRow = offsetM + tidm + wm * RTSM;
+    for (int wn = 0; wn < WPTN; wn++) {
+      int globalCol = offsetN + tidn + wn * RTSN;
+      C[globalCol * M + globalRow] = acc[wm][wn];
+    }
+  }
+}

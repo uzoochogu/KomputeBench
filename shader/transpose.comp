@@ -1,0 +1,48 @@
+// Derived from https://www.ibiblio.org/e-notes/webgl/gpu/mul/sgemm.htm
+// Transpose shader
+
+#version 450
+
+#define TRANSPOSEX 32u
+#define TRANSPOSEY 32u
+layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+layout(std430, binding = 2) readonly buffer ssb2 { float inp[]; };
+layout(std430, binding = 1) writeonly buffer ssb1 { float outp[]; };
+
+layout(push_constant) uniform PushConstants {
+  float M;
+  float N;
+  float K;
+}
+params;
+
+shared float buff[TRANSPOSEX][TRANSPOSEY];
+
+void main() {
+  uint P = uint(params.M), Q = uint(params.N);
+
+  // Thread identifiers
+  uint tx = gl_LocalInvocationID.x;
+  uint ty = gl_LocalInvocationID.y;
+  uint ID0 = gl_WorkGroupID.x * TRANSPOSEX + tx;  // (0..P)
+  uint ID1 = gl_WorkGroupID.y * TRANSPOSEY + ty;  // (0..Q)
+
+  // Swap the x and y coordinates to perform the rotation (coalesced)
+  if (ID0 < P && ID1 < Q) {
+    buff[ty][tx] = inp[ID1 * P + ID0];
+  }
+
+  // Synchronise all threads
+  memoryBarrierShared();
+  barrier();
+
+  // We don't have to swap the x and y thread indices here,
+  // because that's already done in the local memory
+  uint newID0 = gl_WorkGroupID.y * TRANSPOSEY + tx;
+  uint newID1 = gl_WorkGroupID.x * TRANSPOSEX + ty;
+
+  // Store the transposed result (coalesced)
+  if (newID0 < Q && newID1 < P) {
+    outp[newID1 * Q + newID0] = buff[tx][ty];
+  }
+}

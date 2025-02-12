@@ -1,0 +1,31 @@
+// Derived from https://www.ibiblio.org/e-notes/webgl/gpu/mul/sgemm.htm
+// Naive matmul for column major matrices
+
+#version 450
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+layout(std430, set = 0, binding = 0) readonly buffer ssbA { float A[]; };
+layout(std430, set = 0, binding = 1) readonly buffer ssbB { float B[]; };
+layout(std430, set = 0, binding = 2) writeonly buffer ssbC { float C[]; };
+
+layout(push_constant) uniform PushConstants {
+  float M;
+  float N;
+  float K;
+}
+params;
+
+void main() {
+  uint M = uint(params.M), N = uint(params.N), K = uint(params.K);
+
+  // Thread identifiers
+  uint globalRow = gl_GlobalInvocationID.x;  // Row ID of C (0..M)
+  uint globalCol = gl_GlobalInvocationID.y;  // Col ID of C (0..N)
+
+  // Compute a single element (loop over K)
+  float acc = 0.0;
+  for (uint k = 0u; k < K; k++)
+    acc += A[k * M + globalRow] * B[globalCol * K + k];
+
+  // Store the result
+  C[globalCol * M + globalRow] = acc;
+}
