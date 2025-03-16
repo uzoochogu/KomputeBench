@@ -35,7 +35,7 @@ The benchmark executables have "benchmark" in their name.
 ## Results
 
 ### cuBLAS vs Kompute naive vs Kompute GEMM Tiling in Local Memory
-<!-- ![cuBLAS vs Kompute naive vs Kompute GEMM Tiling in Local Memory](./images/sgemm_benchmark.png =937x516) -->
+<!-- ![cuBLAS vs Kompute naive vs Kompute GEMM Tiling in Local Memory](./images/sgemm_benchmark.png =928x517) -->
 <img src="./images/sgemm_benchmark.png" width="642" height="354" alt="cuBLAS vs Kompute naive vs Kompute GEMM Tiling in Local Memory">
 
 <br> <br>
@@ -43,9 +43,9 @@ The benchmark executables have "benchmark" in their name.
 
 ### Discussion
 
-* Fastest Naive implementation is about 0.12x of cuBLAS performance.
-* Fastest Tiling Implementation is about 0.1x of cuBLAS performance.
-* 2D register blocking achieves about 0.35x of cuBLAS performance.
+* Fastest Naive implementation is about `0.08x` of cuBLAS performance.
+* Fastest Tiling Implementation is about `0.11x` of cuBLAS performance.
+* 2D register blocking achieves about `0.32x` of cuBLAS performance.
 
 There are still various optimizations that can be done to improve performance.
 
@@ -55,12 +55,12 @@ There are still various optimizations that can be done to improve performance.
 - [ ] Transposed input matrix.
 - [ ] More work per thread.
 - [ ] Wider loads with register blocking.
-- [X] 2D register blocking.
+- [x] 2D register blocking.
 
 ## Todo
-- [ ] Compare cuBLAS sgemm against Kompute using various GEMMs methods.
+- [x] Compare cuBLAS sgemm against Kompute using various GEMMs methods.
 - [ ] Try half precision cuBLAS hgemms vs Kompute HGEMMs - Using Vulkan half floats.
-- [ ] Create Kompute Operations for these methods to ease use.
+- [ ] Create Kompute Operations for these methods to ease usage.
 
 ## References
 * [`Matrix multiplication in WebGL2-compute`](https://www.ibiblio.org/e-notes/webgl/gpu/mul/sgemm.htm)

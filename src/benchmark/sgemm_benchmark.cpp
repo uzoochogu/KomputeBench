@@ -61,8 +61,7 @@ static void Kompute_Naive_V1(benchmark::State& state) {
     mgr.sequence()
         ->record<kp::OpSyncDevice>({tensorA, tensorB})
         ->record<kp::OpAlgoDispatch>(algo)
-        ->record<kp::OpSyncLocal>({tensorC})
-        ->eval();
+        ->eval();  // blocks until completion - appends a barrier
   }
 }
 
@@ -93,7 +92,6 @@ static void Kompute_Naive_V2(benchmark::State& state) {
     mgr.sequence()
         ->record<kp::OpSyncDevice>({tensorA, tensorB})
         ->record<kp::OpAlgoDispatch>(algo)
-        ->record<kp::OpSyncLocal>({tensorC})
         ->eval();
   }
 }
@@ -129,7 +127,6 @@ static void Kompute_Naive_Col(benchmark::State& state) {
     mgr.sequence()
         ->record<kp::OpSyncDevice>({tensorA, tensorB})
         ->record<kp::OpAlgoDispatch>(algo)
-        ->record<kp::OpSyncLocal>({tensorC})
         ->eval();
   }
 }
@@ -162,7 +159,6 @@ static void Kompute_Tiled_V1(benchmark::State& state) {
     mgr.sequence()
         ->record<kp::OpSyncDevice>({tensorA, tensorB})
         ->record<kp::OpAlgoDispatch>(algo)
-        ->record<kp::OpSyncLocal>({tensorC})
         ->eval();
   }
 }
@@ -194,7 +190,6 @@ static void Kompute_Tiled_V2(benchmark::State& state) {
     mgr.sequence()
         ->record<kp::OpSyncDevice>({tensorA, tensorB})
         ->record<kp::OpAlgoDispatch>(algo)
-        ->record<kp::OpSyncLocal>({tensorC})
         ->eval();
   }
 }
@@ -226,7 +221,6 @@ static void Kompute_Tiled_V3(benchmark::State& state) {
     mgr.sequence()
         ->record<kp::OpSyncDevice>({tensorA, tensorB})
         ->record<kp::OpAlgoDispatch>(algo)
-        ->record<kp::OpSyncLocal>({tensorC})
         ->eval();
   }
 }
@@ -258,7 +252,6 @@ static void Kompute_Tiled_V4(benchmark::State& state) {
     mgr.sequence()
         ->record<kp::OpSyncDevice>({tensorA, tensorB})
         ->record<kp::OpAlgoDispatch>(algo)
-        ->record<kp::OpSyncLocal>({tensorC})
         ->eval();
   }
 }
@@ -294,7 +287,6 @@ static void Kompute_Tiled_Col(benchmark::State& state) {
     mgr.sequence()
         ->record<kp::OpSyncDevice>({tensorA, tensorB})
         ->record<kp::OpAlgoDispatch>(algo)
-        ->record<kp::OpSyncLocal>({tensorC})
         ->eval();
   }
 }
@@ -338,7 +330,6 @@ static void Kompute_Register_Blocking_Col(benchmark::State& state) {
     mgr.sequence()
         ->record<kp::OpSyncDevice>({tensorA, tensorB})
         ->record<kp::OpAlgoDispatch>(algo)
-        ->record<kp::OpSyncLocal>({tensorC})
         ->eval();
   }
 }
@@ -369,8 +360,7 @@ static void CUBLAS(benchmark::State& state) {
   for (auto _ : state) {
     CHECK_CUBLAS(cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K, &alpha,
                              d_B, N, d_A, K, &beta, d_C, N));
-    CHECK_CUDA(cudaMemcpy(C.data(), d_C, M * N * sizeof(float),
-                          cudaMemcpyDeviceToHost));
+    CHECK_CUDA(cudaDeviceSynchronize());
   }
   CHECK_CUDA(cudaFree(d_A));
   CHECK_CUDA(cudaFree(d_B));
